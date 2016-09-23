@@ -1,0 +1,172 @@
+db.createUser(user, writeConcern)
+Creates a new user for the database where the method runs. db.createUser() returns a duplicate user error if the user already exists on the database.
+
+The db.createUser() method has the following syntax:
+
+Field	Type	Description
+user	document	The document with authentication and access information about the user to create.
+writeConcern	document	Optional. The level of write concern for the creation operation. The writeConcern document takes the same fields as the getLastError command.
+The user document defines the user and has the following form:
+
+{ user: "<name>",
+  pwd: "<cleartext password>",
+  customData: { <any information> },
+  roles: [
+    { role: "<role>", db: "<database>" } | "<role>",
+    ...
+  ]
+}
+The user document has the following fields:
+
+Field	Type	Description
+user	string	The name of the new user.
+pwd	string	The user’s password. The pwd field is not required if you run db.createUser() on the $external database to create users who have credentials stored externally to MongoDB.
+customData	document	Optional. Any arbitrary information. This field can be used to store any data an admin wishes to associate with this particular user. For example, this could be the user’s full name or employee id.
+roles	array	The roles granted to the user. Can specify an empty array [] to create users without roles.
+In the roles field, you can specify both built-in roles and user-defined role.
+
+To specify a role that exists in the same database where db.createUser() runs, you can either specify the role with the name of the role:
+
+"readWrite"
+Or you can specify the role with a document, as in:
+
+{ role: "<role>", db: "<database>" }
+To specify a role that exists in a different database, specify the role with a document.
+
+The db.createUser() method wraps the createUser command.
+
+Behavior
+
+Encryption
+
+db.createUser() sends password to the MongoDB instance without encryption. To encrypt the password during transmission, use TLS/SSL.
+
+External Credentials
+
+Users created on the $external database should have credentials stored externally to MongoDB, as, for example, with MongoDB Enterprise installations that use Kerberos.
+
+local Database
+
+You cannot create users on the local database.
+
+Required Access
+
+To create a new user in a database, you must have the createUser action on that database resource.
+To grant roles to a user, you must have the grantRole action on the role’s database.
+The userAdmin and userAdminAnyDatabase built-in roles provide createUser and grantRole actions on their respective resources.
+
+Examples
+
+The following db.createUser() operation creates the accountAdmin01 user on the products database.
+
+use products
+db.createUser( { user: "accountAdmin01",
+                 pwd: "changeMe",
+                 customData: { employeeId: 12345 },
+                 roles: [ { role: "clusterAdmin", db: "admin" },
+                          { role: "readAnyDatabase", db: "admin" },
+                          "readWrite"] },
+               { w: "majority" , wtimeout: 5000 } )
+The operation gives accountAdmin01 the following roles:
+
+the clusterAdmin and readAnyDatabase roles on the admin database
+the readWrite role on the products database
+Create User with Roles
+
+The following operation creates accountUser in the products database and gives the user the readWrite and dbAdmin roles.
+
+use products
+db.createUser(
+   {
+     user: "accountUser",
+     pwd: "password",
+     roles: [ "readWrite", "dbAdmin" ]
+   }
+)
+Create User Without Roles
+
+The following operation creates a user named reportsUser in the admin database but does not yet assign roles:
+
+use admin
+db.createUser(
+   {
+     user: "reportsUser",
+     pwd: "password",
+     roles: [ ]
+   }
+)
+Create Administrative User with Roles
+
+The following operation creates a user named appAdmin in the admin database and gives the user readWrite access to the config database, which lets the user change certain settings for sharded clusters, such as to the balancer setting.
+
+use admin
+db.createUser(
+   {
+     user: "appAdmin",
+     pwd: "password",
+     roles:
+       [
+         { role: "readWrite", db: "config" },
+         "clusterAdmin"
+       ]
+   }
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+db.auth()¶
+Allows a user to authenticate to the database from within the shell.
+
+The db.auth() method can accept either:
+
+the username and password.
+
+db.auth( <username>, <password> )
+
+a user document that contains the username and password, and optionally, the authentication mechanism and a digest password flag.
+
+db.auth( {
+   user: <username>,
+   pwd: <password>,
+   mechanism: <authentication mechanism>,
+   digestPassword: <boolean>
+} )
+
+Parameter	Type	Description
+username	string	Specifies an existing username with access privileges for this database.
+password	string	Specifies the corresponding password.
+mechanism	string	
+Optional. Specifies the authentication mechanism used. Defaults to either:
+
+SCRAM-SHA-1 on new 3.0 installations and on 3.0 databases that have been upgraded from 2.6 with authSchemaUpgrade; or
+MONGODB-CR otherwise.
+Changed in version 3.0: In previous version, defaulted to MONGODB-CR.
+
+For available mechanisms, see authentication mechanisms.
+
+digestPassword	boolean	Optional. Determines whether the server receives digested or undigested password. Set to false to specify undigested password. For use with SASL/LDAP authentication since the server must forward an undigested password to saslauthd.
+Alternatively, you can use mongo --username, --password, and --authenticationMechanism to specify authentication credentials.
+
+NOTE
+The mongo shell excludes all db.auth() operations from the saved history.
+Returns:	db.auth() returns 0 when authentication is not successful, and 1 when the operation is successful.
+
+
+
+
+
+http://bubkoo.com/2014/02/07/mongodb-authentication/
